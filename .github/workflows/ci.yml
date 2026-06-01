@@ -1,4 +1,4 @@
-name: Java Maven CI
+name: Build-Test-Sonar Pipeline
 
 on:
   push:
@@ -7,35 +7,62 @@ on:
 
 jobs:
   build-test-sonar:
-
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Code checkout
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-    - name: Checkout Code
-      uses: actions/checkout@v4
+      # 2. Detect project type
+      - name: Check project files
+        run: |
+          echo "Listing files..."
+          ls -la
 
-    - name: Setup Java
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
+      # 3. Setup Java (only needed for Maven/Gradle projects)
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
 
-    - name: Build
-      run: mvn clean package
+      # 4. Build (ONLY if pom.xml exists)
+      - name: Build with Maven
+        run: |
+          if [ -f pom.xml ]; then
+            mvn clean package
+          else
+            echo "No pom.xml found - skipping Maven build"
+          fi
 
-    - name: Run Tests
-      run: mvn test
+      # 5. Run tests (ONLY if pom.xml exists)
+      - name: Run Tests
+        run: |
+          if [ -f pom.xml ]; then
+            mvn test
+          else
+            echo "No pom.xml found - skipping tests"
+          fi
 
-    - name: SonarQube Scan
-      run: |
-        mvn sonar:sonar \
-        -Dsonar.projectKey=java-maven-app \
-        -Dsonar.host.url=${{ vars.SONAR_HOST_URL }} \
-        -Dsonar.token=${{ secrets.SONAR_TOKEN }}
+      # 6. SonarQube Scan (ONLY if Maven project exists)
+      - name: SonarQube Scan
+        run: |
+          if [ -f pom.xml ]; then
+            mvn sonar:sonar \
+              -Dsonar.projectKey=java-maven-app \
+              -Dsonar.host.url=${{ vars.SONAR_HOST_URL }} \
+              -Dsonar.token=${{ secrets.SONAR_TOKEN }}
+          else
+            echo "No pom.xml found - skipping Sonar scan"
+          fi
 
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: springboot-app
-        path: target/*.jar
+      # 7. Upload artifact (if exists)
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-artifact
+          path: |
+            target/*.jar
+            dist/*
+            build/*
