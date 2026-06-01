@@ -1,4 +1,4 @@
-name: Node.js CI + SonarQube
+name: Node.js CI + SonarQube + Artifact
 
 on:
   push:
@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Code checkout
+      # 1. Checkout code
       - name: Checkout Code
         uses: actions/checkout@v4
 
@@ -24,32 +24,33 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      # 4. Run tests (əgər varsa)
+      # 4. Run tests (if exist)
       - name: Run Tests
         run: npm test || echo "No tests found"
 
-      # 5. SonarQube Scan (Node.js üçün)
+      # 5. SonarQube Scan (FIXED AUTH)
       - name: SonarQube Scan
         run: |
           npx sonar-scanner \
             -Dsonar.projectKey=node-app \
             -Dsonar.host.url=${{ vars.SONAR_HOST_URL }} \
-            -Dsonar.token=${{ secrets.SONAR_TOKEN }}
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
+            -Dsonar.sources=.
 
-      # 6. Build (əgər build varsa)
+      # 6. Build (if exists)
       - name: Build project
         run: |
           if [ -f package.json ]; then
-            echo "Node project detected"
-            npm run build || echo "No build script"
+            npm run build || echo "No build script found"
           fi
 
-      # 7. Upload artifact (Node.js üçün)
+      # 7. Upload Artifact (FIXED - avoid empty paths)
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: node-app
+          name: node-app-artifact
           path: |
             dist/
             build/
-            .
+            package.json
+            package-lock.json
