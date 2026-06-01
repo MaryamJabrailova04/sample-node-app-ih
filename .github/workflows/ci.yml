@@ -1,0 +1,41 @@
+name: Java Maven CI
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-test-sonar:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Build
+      run: mvn clean package
+
+    - name: Run Tests
+      run: mvn test
+
+    - name: SonarQube Scan
+      run: |
+        mvn sonar:sonar \
+        -Dsonar.projectKey=java-maven-app \
+        -Dsonar.host.url=${{ vars.SONAR_HOST_URL }} \
+        -Dsonar.token=${{ secrets.SONAR_TOKEN }}
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: springboot-app
+        path: target/*.jar
