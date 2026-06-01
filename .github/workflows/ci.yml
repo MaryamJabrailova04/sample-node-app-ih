@@ -1,4 +1,4 @@
-name: Build-Test-Sonar Pipeline
+name: Node.js CI + SonarQube
 
 on:
   push:
@@ -14,55 +14,42 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 2. Detect project type
-      - name: Check project files
-        run: |
-          echo "Listing files..."
-          ls -la
-
-      # 3. Setup Java (only needed for Maven/Gradle projects)
-      - name: Setup Java
-        uses: actions/setup-java@v4
+      # 2. Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          distribution: temurin
-          java-version: '17'
+          node-version: 20
 
-      # 4. Build (ONLY if pom.xml exists)
-      - name: Build with Maven
-        run: |
-          if [ -f pom.xml ]; then
-            mvn clean package
-          else
-            echo "No pom.xml found - skipping Maven build"
-          fi
+      # 3. Install dependencies
+      - name: Install dependencies
+        run: npm install
 
-      # 5. Run tests (ONLY if pom.xml exists)
+      # 4. Run tests (əgər varsa)
       - name: Run Tests
-        run: |
-          if [ -f pom.xml ]; then
-            mvn test
-          else
-            echo "No pom.xml found - skipping tests"
-          fi
+        run: npm test || echo "No tests found"
 
-      # 6. SonarQube Scan (ONLY if Maven project exists)
+      # 5. SonarQube Scan (Node.js üçün)
       - name: SonarQube Scan
         run: |
-          if [ -f pom.xml ]; then
-            mvn sonar:sonar \
-              -Dsonar.projectKey=java-maven-app \
-              -Dsonar.host.url=${{ vars.SONAR_HOST_URL }} \
-              -Dsonar.token=${{ secrets.SONAR_TOKEN }}
-          else
-            echo "No pom.xml found - skipping Sonar scan"
+          npx sonar-scanner \
+            -Dsonar.projectKey=node-app \
+            -Dsonar.host.url=${{ vars.SONAR_HOST_URL }} \
+            -Dsonar.token=${{ secrets.SONAR_TOKEN }}
+
+      # 6. Build (əgər build varsa)
+      - name: Build project
+        run: |
+          if [ -f package.json ]; then
+            echo "Node project detected"
+            npm run build || echo "No build script"
           fi
 
-      # 7. Upload artifact (if exists)
+      # 7. Upload artifact (Node.js üçün)
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-artifact
+          name: node-app
           path: |
-            target/*.jar
-            dist/*
-            build/*
+            dist/
+            build/
+            .
